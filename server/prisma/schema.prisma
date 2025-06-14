@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id            String         @id @default(cuid())
+  name          String
+  users         User[]
+  plans         Plan[]         @relation("TenantPlans")
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  planId        String?
+  currentPlan   Plan?          @relation("CurrentPlan", fields: [planId], references: [id])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Plan {
+  id             String         @id @default(cuid())
+  name           String
+  price          Float
+  description    String?
+  features       Json?
+  tenants        Tenant[]       @relation("TenantPlans")
+  currentTenants Tenant[]       @relation("CurrentPlan")
+  createdAt      DateTime       @default(now())
+  subscriptions  Subscription[]
+}
+
+model Subscription {
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  planId    String
+  plan      Plan      @relation(fields: [planId], references: [id])
+  status    String
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+}
