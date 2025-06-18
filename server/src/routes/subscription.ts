@@ -1,26 +1,41 @@
 import { Router, Request, Response } from "express";
 import prisma from "../../prisma/client";
-import { authenticate } from "../middlewares/authmiddlewares";
+import { authenticate } from "../middlewares/authmiddleware";
+const subscriptionRouter = Router();
 
-const router = Router();
+//  Apply auth to all subscription routes
+subscriptionRouter.use(authenticate);
 
-router.use(authenticate);
-
-router.get("/subscription", async (req, res) => {
+//  Get current subscription
+subscriptionRouter.get("/subscription", async (req: Request, res: Response) => {
     const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+        res.status(400).json({ error: "Missing tenant ID" });
+        return;
+    }
+
     const subscription = await prisma.subscription.findMany({
         where: { tenantId },
         include: { plan: true }
     });
+
     res.json(subscription);
 });
 
-router.post("/subscribe", async (req, res) => {
+// Create subscription
+subscriptionRouter.post("/subscribe", async (req: Request, res: Response) => {
     const { planId, tenantId } = req.body;
+
+    if (!tenantId || !planId) {
+        res.status(400).json({ error: "Missing tenantId or planId" });
+        return;
+    }
+
     const existing = await prisma.subscription.findFirst({ where: { tenantId } });
 
     if (existing) {
-        return res.status(400).json({ message: "Tenant Already Exists" });
+        res.status(400).json({ message: "Tenant already subscribed" });
+        return
     }
 
     const subscription = await prisma.subscription.create({
@@ -35,8 +50,14 @@ router.post("/subscribe", async (req, res) => {
     res.status(201).json(subscription);
 });
 
-router.post("/cancel", async (req: Request, res: Response) => {
+//  Cancel subscription
+subscriptionRouter.post("/cancel", async (req: Request, res: Response) => {
     const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+        res.status(400).json({ error: "Missing tenant ID" });
+        return
+    }
 
     const updated = await prisma.subscription.updateMany({
         where: { tenantId, status: "active" },
@@ -46,4 +67,4 @@ router.post("/cancel", async (req: Request, res: Response) => {
     res.json({ success: true, updated });
 });
 
-export default router;
+export default subscriptionRouter;

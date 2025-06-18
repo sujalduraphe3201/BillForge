@@ -4,7 +4,7 @@ import prisma from "../../prisma/client";
 import { generateToken } from "../utils/jwt";
 
 export const signup = async (req: Request, res: Response, next: NextFunction) => {
-    const { name, email, password, tenantId } = req.body;
+    const { name, email, password, tenantId, } = req.body;
 
     if (!name || !email || !password || !tenantId) {
         res.status(400).json({ error: "All fields are required" });
@@ -12,6 +12,16 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
     }
 
     try {
+        let tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+        if (!tenant) {
+            tenant = await prisma.tenant.create({
+                data: {
+                    id: tenantId,
+                    name: tenantId
+                }
+            });
+        }
+
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) {
             res.status(409).json({ error: "Email already in use" });
@@ -68,3 +78,34 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         next(err);
     }
 };
+// @ts-ignore
+export const me = async (req: Request, res: Response, next: NextFunction) => {
+    const user = await prisma.user.findUnique({
+        where: { id: req.user?.userId },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            tenantId: true,
+            tenant: {
+                select: {
+                    name: true,
+                    subscriptions: {
+                        where: { status: "active" },
+                        select: {
+                            plan: { select: { name: true, price: true } },
+                            startDate: true,
+                            endDate: true,
+                            status: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+    if (!user) res.status(404).json({ error: "User not found" });
+    res.json(user);
+
+}
+
+

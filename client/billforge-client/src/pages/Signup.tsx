@@ -17,6 +17,7 @@ function Signup() {
       localStorage.setItem('token', data.token);
       navigate('/dashboard');
     } catch (err) {
+      console.log(err)
       alert('Signup failed');
     }
   };
