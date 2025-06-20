@@ -3,7 +3,6 @@ import prisma from "../../prisma/client";
 import { authenticate } from "../middlewares/authmiddleware";
 const subscriptionRouter = Router();
 
-//  Apply auth to all subscription routes
 subscriptionRouter.use(authenticate);
 
 //  Get current subscription
@@ -66,5 +65,5 @@ subscriptionRouter.post("/cancel", async (req: Request, res: Response) => {
 
     res.json({ success: true, updated });
 });
-
 export default subscriptionRouter;
+
