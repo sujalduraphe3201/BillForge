@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id            String         @id @default(cuid())
+  name          String
+  createdAt     DateTime       @default(now())
+  users         User[]
+  plans         Plan[]         @relation("TenantPlans")
+  subscriptions Subscription[]
+  planId        String?
+  currentPlan   Plan?          @relation("CurrentPlan", fields: [planId], references: [id])
+  invoices      invoices[]
+  usages        Usage[]
+  activitylog   activityLog[]
+}
+
+model User {
+  id         String        @id @default(cuid())
+  name       String
+  email      String        @unique
+  password   String
+  createdAt  DateTime      @default(now())
+  activtylog activityLog[]
+  tenantId   String
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  Usage      Usage[]
+}
+
+model Plan {
+  id             String         @id @default(cuid())
+  name           String
+  price          Float
+  description    String?
+  features       Json?
+  createdAt      DateTime       @default(now())
+  tenants        Tenant[]       @relation("TenantPlans")
+  currentTenants Tenant[]       @relation("CurrentPlan")
+  subscriptions  Subscription[]
+}
+
+model Subscription {
+  id        String    @id @default(cuid())
+  status    String
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  planId    String
+  plan      Plan      @relation(fields: [planId], references: [id])
+}
+
+model invoices {
+  id       String   @id @default(cuid())
+  tenantId String
+  amount   Int
+  method   String
+  status   String
+  date     DateTime @default(now())
+  Tenant   Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model Usage {
+  id        String   @id @default(uuid())
+  tenantId  String
+  metric    String // e.g., "API Calls", "Deployments"
+  amount    Int // e.g., how many calls were made
+  timestamp DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model activityLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  userId    String
+  metadata  Json?
+  action    String
+  timeStamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
